@@ -1,0 +1,860 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TERMINAL_BROWSER_V3</title>
+    <!-- Dynamic Favicon Link -->
+    <link id="dynamic-favicon" rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🖥️</text></svg>">
+
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script>
+        // Config now uses CSS variables for dynamic theming
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        hacker: {
+                            bg: 'var(--h-bg)',
+                            dark: 'var(--h-dark)',
+                            green: 'var(--h-green)',
+                            dim: 'var(--h-dim)',
+                            border: 'var(--h-border)'
+                        }
+                    },
+                    fontFamily: {
+                        mono: ['var(--h-font)', 'monospace'],
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        /* CSS Variables for Theming */
+        :root {
+            /* Default Hacker Theme */
+            --h-bg: #0d0d0d;
+            --h-dark: #1a1a1a;
+            --h-green: #00ff41;
+            --h-dim: #008F11;
+            --h-border: #333333;
+            --h-font: 'Courier New', Courier, monospace;
+        }
+
+        /* Professional Theme Overrides */
+        body.professional-theme {
+            --h-bg: #111827; /* Gray 900 */
+            --h-dark: #1f2937; /* Gray 800 */
+            --h-green: #60a5fa; /* Blue 400 */
+            --h-dim: #9ca3af; /* Gray 400 */
+            --h-border: #374151; /* Gray 700 */
+            --h-font: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+        }
+
+        body {
+            background-color: var(--h-bg);
+            color: var(--h-green);
+            font-family: var(--h-font);
+            overflow: hidden;
+            transition: background-color 0.3s, color 0.3s;
+        }
+
+        /* Scrollbar Styling */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: var(--h-dark);
+        }
+        ::-webkit-scrollbar-thumb {
+            background: var(--h-dim);
+            border: 1px solid var(--h-green);
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: var(--h-green);
+        }
+
+        /* CRT Scanline Effect */
+        .scanline {
+            width: 100%;
+            height: 100px;
+            z-index: 10;
+            background: linear-gradient(0deg, rgba(0,0,0,0) 0%, rgba(0, 255, 65, 0.04) 50%, rgba(0,0,0,0) 100%);
+            opacity: 0.1;
+            background-size: 100% 100%;
+            position: absolute;
+            bottom: 100%;
+            animation: scanline 10s linear infinite;
+            pointer-events: none;
+        }
+
+        /* Hide scanlines in professional mode */
+        body.professional-theme .scanline {
+            display: none;
+        }
+
+        @keyframes scanline {
+            0% { bottom: 100%; }
+            100% { bottom: -100px; }
+        }
+
+        .hacker-border {
+            border: 1px solid var(--h-border);
+            transition: all 0.2s;
+        }
+        .hacker-border:focus-within, .hacker-border:hover {
+            border-color: var(--h-green);
+            box-shadow: 0 0 8px rgba(0, 255, 65, 0.2);
+        }
+
+        /* Update shadow color for pro theme */
+        body.professional-theme .hacker-border:focus-within,
+        body.professional-theme .hacker-border:hover {
+            box-shadow: 0 0 8px rgba(96, 165, 250, 0.3);
+        }
+
+        /* Frames container */
+        #frames-container iframe {
+            width: 100%;
+            height: 100%;
+            border: none;
+            background-color: white;
+        }
+        /* Hide inactive frames */
+        #frames-container iframe.hidden-frame {
+            display: none;
+        }
+
+        /* Cloak Modal Input Styles */
+        .cloak-input {
+            width: 100%;
+            background: var(--h-bg);
+            border: 1px solid var(--h-border);
+            color: var(--h-green);
+            padding: 8px;
+            margin-bottom: 10px;
+            font-family: inherit;
+        }
+        .cloak-input:focus {
+            outline: none;
+            border-color: var(--h-green);
+        }
+    </style>
+</head>
+<body class="flex flex-col h-screen w-screen relative">
+
+    <!-- Scanline Effect Overlay -->
+    <div class="scanline"></div>
+    <div class="absolute inset-0 pointer-events-none" style="background: repeating-linear-gradient(0deg, rgba(0,0,0,0.15), rgba(0,0,0,0.15) 1px, transparent 1px, transparent 2px);"></div>
+
+    <!-- Top Bar: Tabs -->
+    <div class="bg-hacker-dark border-b border-hacker-green/30 flex items-end pt-2 px-2 gap-1 overflow-x-auto select-none" id="tabs-container">
+        <!-- Tabs injected here -->
+    </div>
+
+    <!-- Navigation Bar -->
+    <div class="bg-hacker-bg p-3 border-b border-hacker-green/30 flex items-center gap-3 shadow-lg z-20 transition-colors duration-300">
+
+        <!-- Nav Controls -->
+        <div class="flex gap-2">
+            <button onclick="goBack()" class="p-2 hover:bg-hacker-green hover:text-black rounded border border-transparent hover:border-hacker-green transition-colors" title="Back">
+                <i data-lucide="arrow-left" class="w-5 h-5"></i>
+            </button>
+            <button onclick="goForward()" class="p-2 hover:bg-hacker-green hover:text-black rounded border border-transparent hover:border-hacker-green transition-colors" title="Forward">
+                <i data-lucide="arrow-right" class="w-5 h-5"></i>
+            </button>
+            <button onclick="reloadPage()" class="p-2 hover:bg-hacker-green hover:text-black rounded border border-transparent hover:border-hacker-green transition-colors" title="Reload">
+                <i data-lucide="rotate-cw" class="w-5 h-5"></i>
+            </button>
+            <!-- Fullscreen Button -->
+            <button onclick="toggleFullscreen()" class="p-2 hover:bg-hacker-green hover:text-black rounded border border-transparent hover:border-hacker-green transition-colors" title="Toggle Fullscreen">
+                <i data-lucide="maximize" class="w-5 h-5"></i>
+            </button>
+            <!-- Open in New Window Button -->
+            <button onclick="openExternal()" class="p-2 hover:bg-hacker-green hover:text-black rounded border border-transparent hover:border-hacker-green transition-colors" title="Open in New Window">
+                <i data-lucide="external-link" class="w-5 h-5"></i>
+            </button>
+            <!-- Theme Toggle Button -->
+            <button onclick="toggleTheme()" class="p-2 hover:bg-hacker-green hover:text-black rounded border border-transparent hover:border-hacker-green transition-colors" title="Toggle Theme">
+                <i data-lucide="palette" class="w-5 h-5"></i>
+            </button>
+            <!-- Open Browser in Popup Button -->
+            <button onclick="openBrowserInPopup()" class="p-2 hover:bg-hacker-green hover:text-black rounded border border-transparent hover:border-hacker-green transition-colors" title="Open Browser in Popup">
+                <i data-lucide="copy" class="w-5 h-5"></i>
+            </button>
+            <!-- OPEN KB HACKS Button -->
+            <button onclick="openKBHacks()" class="p-2 hover:bg-hacker-green hover:text-black rounded border border-transparent hover:border-hacker-green transition-colors" title="Open KB HACKS">
+                <i data-lucide="code" class="w-5 h-5"></i>
+            </button>
+        </div>
+
+        <!-- URL Bar -->
+        <div class="flex-1 hacker-border bg-black p-1 pl-3 pr-1 rounded flex items-center gap-2">
+            <i data-lucide="lock" class="w-4 h-4 text-hacker-dim"></i>
+            <span class="text-hacker-dim select-none">GET</span>
+            <input type="text" id="url-input"
+                class="flex-1 bg-transparent border-none outline-none text-hacker-green font-mono placeholder-hacker-dim/50"
+                placeholder="Enter URL or html::<code>..."
+                autocomplete="off">
+        </div>
+
+        <!-- Bookmark Toggle -->
+        <button onclick="toggleBookmark()" id="bookmark-btn" class="p-2 hover:text-yellow-400 transition-colors" title="Bookmark this page">
+            <i data-lucide="star" class="w-5 h-5"></i>
+        </button>
+
+        <!-- CLOAK BUTTON -->
+        <button onclick="toggleCloakModal()" class="p-2 hover:text-purple-400 transition-colors" title="Cloak Tab">
+            <i data-lucide="ghost" class="w-5 h-5"></i>
+        </button>
+
+        <!-- Menu / Add Tab -->
+        <button onclick="addTab()" class="p-2 hover:bg-hacker-green hover:text-black rounded border border-hacker-green text-hacker-green transition-colors font-bold flex items-center gap-2">
+            <i data-lucide="plus" class="w-4 h-4"></i> NEW_TAB
+        </button>
+    </div>
+
+    <!-- Bookmarks Bar -->
+    <div id="bookmarks-bar" class="bg-hacker-dark/50 border-b border-hacker-green/20 px-4 py-1 flex gap-4 overflow-x-auto text-sm min-h-[32px] items-center transition-colors duration-300">
+        <!-- Bookmarks injected here -->
+    </div>
+
+    <!-- Main Content Area -->
+    <div class="flex-1 relative bg-white" id="main-content">
+        <!-- Container for multiple iframes -->
+        <div id="frames-container" class="w-full h-full"></div>
+
+        <!-- Error Overlay (Hidden by default) -->
+        <div id="error-overlay" class="hidden absolute inset-0 bg-hacker-bg flex flex-col items-center justify-center text-hacker-green z-30 p-8 text-center pointer-events-none">
+            <div class="pointer-events-auto flex flex-col items-center">
+                <i data-lucide="shield-alert" class="w-16 h-16 mb-4"></i>
+                <h2 class="text-2xl font-bold mb-2">CONNECTION_REFUSED</h2>
+                <p class="mb-4 text-hacker-dim max-w-md">The target system refused the connection. This often happens with major sites like Google/YouTube inside these simulated terminals.</p>
+                <button onclick="loadUrl('https://en.wikipedia.org/wiki/Special:Random')" class="px-4 py-2 border border-hacker-green hover:bg-hacker-green hover:text-black transition">
+                    INITIATE_ALTERNATE_ROUTE
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Cloaking Modal -->
+    <div id="cloak-modal" class="hidden absolute inset-0 bg-black/90 z-50 flex items-center justify-center p-4">
+        <div class="bg-hacker-dark border border-hacker-green p-6 rounded-lg w-full max-w-md shadow-[0_0_20px_rgba(0,255,65,0.2)] transition-colors duration-300">
+            <h2 class="text-xl font-bold mb-4 flex items-center gap-2">
+                <i data-lucide="ghost" class="w-5 h-5"></i> TAB_CLOAKING_DEVICE
+            </h2>
+
+            <div class="mb-4">
+                <label class="block text-xs text-hacker-dim mb-1">TARGET_TITLE</label>
+                <input type="text" id="cloak-title" class="cloak-input" placeholder="Google">
+            </div>
+
+            <div class="mb-6">
+                <label class="block text-xs text-hacker-dim mb-1">TARGET_ICON_URL</label>
+                <input type="text" id="cloak-icon" class="cloak-input" placeholder="https://www.google.com/favicon.ico">
+            </div>
+
+            <div class="grid grid-cols-2 gap-3 mb-6">
+                <button onclick="applyPreset('google')" class="p-2 border border-hacker-green/50 hover:bg-hacker-green hover:text-black transition text-sm">Google</button>
+                <button onclick="applyPreset('clever')" class="p-2 border border-hacker-green/50 hover:bg-hacker-green hover:text-black transition text-sm">Clever</button>
+                <button onclick="applyPreset('savvas')" class="p-2 border border-hacker-green/50 hover:bg-hacker-green hover:text-black transition text-sm">Savvas Realize</button>
+                <button onclick="applyPreset('delta')" class="p-2 border border-hacker-green/50 hover:bg-hacker-green hover:text-black transition text-sm">Delta Math</button>
+                <!-- NEW IMAGE PRESETS -->
+                <button onclick="applyPreset('image1')" class="p-2 border border-hacker-green/50 hover:bg-hacker-green hover:text-black transition text-sm">Image 1</button>
+                <button onclick="applyPreset('image2')" class="p-2 border border-hacker-green/50 hover:bg-hacker-green hover:text-black transition text-sm">Image 2</button>
+                <button onclick="applyPreset('image3')" class="p-2 border border-hacker-green/50 hover:bg-hacker-green hover:text-black transition text-sm">Image 3</button>
+                <button onclick="applyPreset('image4')" class="p-2 border border-hacker-green/50 hover:bg-hacker-green hover:text-black transition text-sm">Image 4</button>
+            </div>
+
+            <div class="flex gap-3 justify-end">
+                <button onclick="resetCloak()" class="px-4 py-2 text-red-400 hover:text-red-300 transition text-sm">RESET</button>
+                <button onclick="toggleCloakModal()" class="px-4 py-2 text-hacker-dim hover:text-white transition text-sm">CANCEL</button>
+                <button onclick="applyCloakFromInput()" class="px-4 py-2 bg-hacker-green text-black font-bold hover:bg-white transition text-sm rounded">ENGAGE</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // --- State Management ---
+        const DEFAULT_HOME = 'https://en.wikipedia.org/wiki/Main_Page';
+
+        // Custom SVG Hacker Chrome Icons (Data URIs)
+        const TAB_IMAGES = [
+            // Variation 1: Solid Dark Green Chrome-ish
+            "data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ccircle cx='50' cy='50' r='48' fill='%230d0d0d' stroke='%2300ff41' stroke-width='4'/%3E%3Ccircle cx='50' cy='50' r='20' fill='%2300ff41'/%3E%3Cpath d='M50 50 L50 2 A48 48 0 0 1 91 26 Z' fill='%23008F11' opacity='0.7'/%3E%3Cpath d='M50 50 L91 26 A48 48 0 0 1 50 98 Z' fill='%23008F11' opacity='0.5'/%3E%3Cpath d='M50 50 L50 98 A48 48 0 0 1 9 26 Z' fill='%23008F11' opacity='0.3'/%3E%3C/svg%3E",
+
+            // Variation 2: Wireframe/Outline Chrome-ish
+            "data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ccircle cx='50' cy='50' r='46' fill='none' stroke='%2300ff41' stroke-width='2'/%3E%3Ccircle cx='50' cy='50' r='18' fill='none' stroke='%2300ff41' stroke-width='2'/%3E%3Cline x1='50' y1='32' x2='50' y2='4' stroke='%2300ff41' stroke-width='2'/%3E%3Cline x1='66' y1='59' x2='90' y2='73' stroke='%2300ff41' stroke-width='2'/%3E%3Cline x1='34' y1='59' x2='10' y2='73' stroke='%2300ff41' stroke-width='2'/%3E%3C/svg%3E",
+
+            // Variation 3: Binary/Matrix Chrome-ish
+            "data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ccircle cx='50' cy='50' r='48' fill='%23000'/%3E%3Ctext x='50' y='55' font-family='monospace' font-size='10' fill='%2300ff41' text-anchor='middle'%3E10101%3C/text%3E%3Ctext x='50' y='45' font-family='monospace' font-size='10' fill='%2300ff41' text-anchor='middle'%3E01010%3C/text%3E%3Ccircle cx='50' cy='50' r='48' fill='none' stroke='%2300ff41' stroke-width='2' stroke-dasharray='5,5'/%3E%3C/svg%3E",
+
+            // Variation 4: Target/Radar Chrome-ish
+            "data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ccircle cx='50' cy='50' r='45' fill='%231a1a1a' stroke='%2300ff41' stroke-width='2'/%3E%3Ccircle cx='50' cy='50' r='30' fill='none' stroke='%2300ff41' stroke-width='1'/%3E%3Ccircle cx='50' cy='50' r='15' fill='%2300ff41'/%3E%3Cpath d='M50 5 L50 20' stroke='%2300ff41' stroke-width='2'/%3E%3Cpath d='M95 50 L80 50' stroke='%2300ff41' stroke-width='2'/%3E%3Cpath d='M50 95 L50 80' stroke='%2300ff41' stroke-width='2'/%3E%3Cpath d='M5 50 L20 50' stroke='%2300ff41' stroke-width='2'/%3E%3C/svg%3E"
+        ];
+
+        let state = {
+            tabs: [],
+            activeTabId: null,
+            bookmarks: []
+        };
+
+        // --- DOM Elements ---
+        let tabsContainer;
+        let urlInput;
+        let framesContainer;
+        let bookmarksBar;
+        let bookmarkBtn;
+        let errorOverlay;
+        let cloakModal;
+        let cloakTitleInput;
+        let cloakIconInput;
+
+        // --- Initialization ---
+        function init() {
+            // 1. Initialize DOM References
+            tabsContainer = document.getElementById('tabs-container');
+            urlInput = document.getElementById('url-input');
+            framesContainer = document.getElementById('frames-container');
+            bookmarksBar = document.getElementById('bookmarks-bar');
+            bookmarkBtn = document.getElementById('bookmark-btn');
+            errorOverlay = document.getElementById('error-overlay');
+            cloakModal = document.getElementById('cloak-modal');
+            cloakTitleInput = document.getElementById('cloak-title');
+            cloakIconInput = document.getElementById('cloak-icon');
+
+            if (!framesContainer) {
+                console.error("Critical Error: frames-container not found in DOM.");
+                return;
+            }
+
+            // 2. Initialize Icons
+            if (window.lucide) {
+                lucide.createIcons();
+            }
+
+            // 3. Load State
+            const savedState = localStorage.getItem('hackerBrowserState');
+            if (savedState) {
+                try {
+                    state = JSON.parse(savedState);
+                    if (!state.tabs || !Array.isArray(state.tabs)) state.tabs = [];
+                    if (!state.bookmarks || !Array.isArray(state.bookmarks)) state.bookmarks = [];
+                } catch (e) {
+                    resetState();
+                }
+            } else {
+                resetState();
+            }
+
+            // Load Theme Preference
+            const savedTheme = localStorage.getItem('hackerBrowserTheme');
+            if (savedTheme === 'professional') {
+                document.body.classList.add('professional-theme');
+            }
+
+            // 4. Restore Interface
+            if (state.tabs.length === 0) {
+                addTab();
+            } else {
+                state.tabs.forEach(tab => {
+                    createIframe(tab.id, tab.url);
+                });
+
+                if (!state.tabs.find(t => t.id === state.activeTabId)) {
+                    state.activeTabId = state.tabs[0].id;
+                }
+
+                renderTabs();
+                renderBookmarks();
+                switchToTab(state.activeTabId);
+            }
+
+            // 5. Load Saved Cloak
+            const savedCloak = localStorage.getItem('hackerBrowserCloak');
+            if (savedCloak) {
+                try {
+                    const { title, icon } = JSON.parse(savedCloak);
+                    setDocumentCloak(title, icon);
+                } catch(e) {}
+            }
+
+            // 6. Event Listeners
+            urlInput.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter') {
+                    let url = urlInput.value.trim();
+                    if (!url) return;
+
+                    if (url.startsWith('html::')) {
+                        updateCurrentTabUrl(url);
+                        return;
+                    }
+
+                    if (!url.startsWith('http://') && !url.startsWith('https://')) {
+                        url = 'https://' + url;
+                    }
+                    updateCurrentTabUrl(url);
+                }
+            });
+
+            // 7. URL Update Interval
+            setInterval(() => {
+                if (document.activeElement === urlInput) return;
+                const iframe = getActiveIframe();
+                if (iframe) {
+                    if (urlInput.value.startsWith('html::')) return;
+                    try {
+                        const currentUrl = iframe.contentWindow.location.href;
+                        if (currentUrl && currentUrl !== 'about:blank' && currentUrl !== urlInput.value) {
+                            urlInput.value = currentUrl;
+                            const tab = state.tabs.find(t => t.id === state.activeTabId);
+                            if (tab) {
+                                tab.url = currentUrl;
+                                saveState();
+                            }
+                        }
+                    } catch (e) {}
+                }
+            }, 300);
+        }
+
+        // --- KB HACKS Function ---
+        function openKBHacks() {
+            window.open('https://sites.google.com/view/kbsigmaboy67/HACKS', '_blank', 'kbhacks');
+        }
+
+        // --- Theme Logic ---
+        function toggleTheme() {
+            document.body.classList.toggle('professional-theme');
+            const isProf = document.body.classList.contains('professional-theme');
+            localStorage.setItem('hackerBrowserTheme', isProf ? 'professional' : 'hacker');
+        }
+
+        function getRandomTabImage() {
+            return TAB_IMAGES[Math.floor(Math.random() * TAB_IMAGES.length)];
+        }
+
+        function resetState() {
+            state = {
+                tabs: [],
+                activeTabId: null,
+                bookmarks: [
+                    { title: 'Wiki', url: 'https://en.wikipedia.org' },
+                    { title: 'Archive', url: 'https://archive.org' },
+                    {
+                        title: 'coolTyper67.app',
+                        url: `html::<link rel='icon' href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIzMiIgaGVpZ2h0PSIzMiI+PHJlY3Qgd2lkdGg9IjEwMCUiIGhlaWdodD0iMTAwJSIgZmlsbD0idHJhbnNwYXJlbnQiLz48L3N2Zz4=" type="svg+xml" /><title>67</title><textarea id='67' >67</textarea> <style> body { font-size:10vh; background: black; color: black; } @keyframes rainbowGlow { 0% { text-shadow: 0 0 20px red; color: red; } 14% { text-shadow: 0 0 20px orange; color: orange; } 28% { text-shadow: 0 0 20px yellow; color: yellow; } 42% { text-shadow: 0 0 20px green; color: green; } 57% { text-shadow: 0 0 20px blue; color:blue; } 71% { text-shadow: 0 0 20px indigo; color:indigo; } 85% { text-shadow: 0 0 20px violet; color:violet; } 100% { text-shadow: 0 0 20px red; color:red; } } * { font-family: monospace ; animation: rainbowGlow 30s infinite ease; border: 0px solid transparent; focus: none; width: 206vh ; height: 100vh; background: transparent; font-animation: rainbowGlow 2s infinite ease; font-size: 10vh; } </style>`
+                    },
+                    {
+                        title: 'Macvg',
+                        url: 'html::<h1>Macvg</h1><embed src="https://amyanddaniel.github.io/macvg/" height=800 width=100% />'
+                    },
+                    {
+                        title: 'UNBLOCKER',
+                        url: 'html::<style>html,body{margin:0;padding:0;width:100%;height:100%;overflow:hidden;}</style><embed src="https://efly.108-181-32-77.sslip.io/" style="width:100%;height:100%;display:block;" />',
+                        unremovable: true
+                    },
+                    {
+                        title: 'UNBLOCKER 2',
+                        url: 'html::<style>html,body{margin:0;padding:0;width:100%;height:100%;overflow:hidden;}</style><embed src="https://tubmledxeni.viar3d.com/" style="width:100%;height:100%;display:block;" />',
+                        unremovable: true
+                    }
+                ]
+            };
+            addTab();
+        }
+
+        function saveState() {
+            localStorage.setItem('hackerBrowserState', JSON.stringify(state));
+        }
+
+        // --- Iframe Management ---
+        function createIframe(tabId, url) {
+            if (!framesContainer) return null;
+
+            const iframe = document.createElement('iframe');
+            iframe.id = `frame-${tabId}`;
+
+            if (url && url.startsWith('html::')) {
+                iframe.srcdoc = url.substring(6);
+            } else {
+                iframe.src = url;
+            }
+
+            iframe.setAttribute('sandbox', 'allow-forms allow-scripts allow-same-origin allow-popups');
+            iframe.classList.add('hidden-frame');
+            iframe.onload = () => {
+                if (state.activeTabId === tabId) {
+                    errorOverlay.classList.add('hidden');
+                }
+            };
+            framesContainer.appendChild(iframe);
+            return iframe;
+        }
+
+        function getActiveIframe() {
+            return document.getElementById(`frame-${state.activeTabId}`);
+        }
+
+        // --- Tab Logic ---
+        function createTabId() {
+            return 'tab_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+        }
+
+        function addTab(url = DEFAULT_HOME) {
+            const newTab = {
+                id: createTabId(),
+                url: url,
+                title: 'New Terminal',
+                iconImage: getRandomTabImage()
+            };
+            state.tabs.push(newTab);
+            createIframe(newTab.id, newTab.url);
+            switchToTab(newTab.id);
+        }
+
+        function closeTab(e, id) {
+            e.stopPropagation();
+            const tabIndex = state.tabs.findIndex(t => t.id === id);
+            if (tabIndex === -1) return;
+
+            const iframe = document.getElementById(`frame-${id}`);
+            if (iframe) iframe.remove();
+
+            state.tabs.splice(tabIndex, 1);
+
+            if (state.activeTabId === id) {
+                if (state.tabs.length > 0) {
+                    const newIndex = Math.max(0, tabIndex - 1);
+                    switchToTab(state.tabs[newIndex].id);
+                } else {
+                    addTab();
+                    return;
+                }
+            } else {
+                renderTabs();
+                saveState();
+            }
+        }
+
+        function switchToTab(id) {
+            state.activeTabId = id;
+            renderTabs();
+
+            const allFrames = framesContainer.querySelectorAll('iframe');
+            allFrames.forEach(f => f.classList.add('hidden-frame'));
+
+            const targetFrame = document.getElementById(`frame-${id}`);
+            if (targetFrame) {
+                targetFrame.classList.remove('hidden-frame');
+                const tabData = state.tabs.find(t => t.id === id);
+                if (tabData) {
+                    urlInput.value = tabData.url;
+                    updateBookmarkIcon(tabData.url);
+                }
+                errorOverlay.classList.add('hidden');
+            }
+            saveState();
+        }
+
+        function updateCurrentTabUrl(url) {
+            const tab = state.tabs.find(t => t.id === state.activeTabId);
+            if (tab) {
+                tab.url = url;
+                const iframe = getActiveIframe();
+
+                if (url.startsWith('html::')) {
+                    iframe.removeAttribute('src');
+                    iframe.srcdoc = url.substring(6);
+                    tab.title = 'HTML_RENDER';
+                } else {
+                    iframe.removeAttribute('srcdoc');
+                    iframe.src = url;
+                    try {
+                        const urlObj = new URL(url);
+                        tab.title = urlObj.hostname;
+                    } catch(e) {
+                        tab.title = url;
+                    }
+                }
+
+                renderTabs();
+                saveState();
+            }
+        }
+
+        // --- Fullscreen Logic ---
+        function toggleFullscreen() {
+            const iframe = getActiveIframe();
+            if (!iframe) return;
+
+            if (!document.fullscreenElement) {
+                iframe.requestFullscreen().catch(err => {
+                    console.error(`Error attempting to enable fullscreen: ${err.message}`);
+                });
+            } else {
+                document.exitFullscreen();
+            }
+        }
+
+        // --- NEW: Open External Logic ---
+        function openExternal() {
+            const tab = state.tabs.find(t => t.id === state.activeTabId);
+            if (!tab) return;
+
+            // As requested by user
+            const win = window.open('about:blank?67', '_blank', 'NewWindow');
+
+            if (!win) {
+                alert("Popup blocked! Please allow popups.");
+                return;
+            }
+
+            const isHtml = tab.url.startsWith('html::');
+            const content = isHtml ? tab.url.substring(6) : tab.url;
+
+            if (isHtml) {
+                // Open real HTML directly
+                win.document.write(content);
+            } else {
+                // Use embed for URLs
+                win.document.write(`
+                    <!DOCTYPE html>
+                    <html lang="en">
+                    <head>
+                        <title>New Tab</title>
+                        <style>html,body{margin:0;padding:0;width:100%;height:100%;overflow:hidden;background:#000;}</style>
+                        <!-- Scripts from main browser -->
+                        <script src="https://cdn.tailwindcss.com"><\/script>
+                        <script src="https://unpkg.com/lucide@latest"><\/script>
+                    </head>
+                    <body>
+                        <embed src="${content}" width="100%" height="100%" />
+                    </body>
+                    </html>
+                `);
+            }
+            win.document.close();
+        }
+
+        // --- Open Browser in Popup Logic ---
+        function openBrowserInPopup() {
+            const win = window.open('about:blank', '_blank', 'width=1200,height=800');
+
+            if (!win) {
+                alert("Popup blocked! Please allow popups.");
+                return;
+            }
+
+            const currentHTML = document.documentElement.outerHTML;
+            win.document.open();
+            win.document.write(currentHTML);
+            win.document.close();
+        }
+
+        // --- Bookmark Logic ---
+        function toggleBookmark() {
+            const currentUrl = urlInput.value;
+            const existingIndex = state.bookmarks.findIndex(b => b.url === currentUrl);
+
+            if (existingIndex >= 0) {
+                // Check if unremovable before deleting via toggle (optional, but good practice)
+                if (state.bookmarks[existingIndex].unremovable) {
+                    alert("This bookmark is protected and cannot be removed.");
+                    return;
+                }
+                state.bookmarks.splice(existingIndex, 1);
+            } else {
+                let title = prompt("ENTER_BOOKMARK_IDENTIFIER:", "Bookmark");
+                if (title) {
+                    state.bookmarks.push({ title, url: currentUrl });
+                }
+            }
+            updateBookmarkIcon(currentUrl);
+            renderBookmarks();
+            saveState();
+        }
+
+        function removeBookmark(e, index) {
+            e.stopPropagation();
+            if (state.bookmarks[index].unremovable) return; // Logic guard
+
+            state.bookmarks.splice(index, 1);
+            updateBookmarkIcon(urlInput.value);
+            renderBookmarks();
+            saveState();
+        }
+
+        function updateBookmarkIcon(url) {
+            const isBookmarked = state.bookmarks.some(b => b.url === url);
+            const icon = bookmarkBtn.querySelector('svg');
+            if (isBookmarked && icon) {
+                bookmarkBtn.classList.add('text-yellow-400');
+                icon.setAttribute('fill', 'currentColor');
+            } else if (icon) {
+                bookmarkBtn.classList.remove('text-yellow-400');
+                icon.setAttribute('fill', 'none');
+            }
+        }
+
+        // --- Cloaking Logic ---
+        const PRESETS = {
+            google: { title: 'Google', icon: 'https://www.google.com/favicon.ico' },
+            clever: { title: 'Clever | Log in', icon: 'https://assets.clever.com/oauth/4492177183a8f54734e3a3dcc64078604ef18971/favicon.ico?1' },
+            savvas: { title: 'Savvas Realize', icon: 'https://www.savvasrealize.com/favicon.ico' },
+            delta: { title: 'DeltaMath', icon: 'https://www.deltamath.com/favicon.ico' },
+            image1: { title: 'Image 1', icon: 'https://lh3.googleusercontent.com/d/10qvjPyOt0nAMDwQGAnxhM4uw-hAq_Iku' },
+            image2: { title: 'Image 2', icon: 'https://lh3.googleusercontent.com/d/14hGdv5jO70xe9_Sjur-w4LXoh97JyH43' },
+            image3: { title: 'Image 3', icon: 'https://lh3.googleusercontent.com/d/13u3hsPD79PeKspEb03W8YVtPC5cDsSSm' },
+            image4: { title: 'Image 4', icon: 'https://lh3.googleusercontent.com/d/1e50UUmsP8afbM9vpVYRTdWWJct9TyaHy' }
+        };
+
+        function toggleCloakModal() {
+            cloakModal.classList.toggle('hidden');
+        }
+
+        function applyPreset(key) {
+            const preset = PRESETS[key];
+            if (preset) {
+                cloakTitleInput.value = preset.title;
+                cloakIconInput.value = preset.icon;
+                applyCloakFromInput();
+            }
+        }
+
+        function applyCloakFromInput() {
+            const title = cloakTitleInput.value || 'TERMINAL_BROWSER_V3';
+            const icon = cloakIconInput.value;
+            setDocumentCloak(title, icon);
+            toggleCloakModal();
+        }
+
+        function setDocumentCloak(title, iconUrl) {
+            document.title = title;
+            let link = document.querySelector("link[rel*='icon']");
+            if (!link) {
+                link = document.createElement('link');
+                link.rel = 'shortcut icon';
+                document.getElementsByTagName('head')[0].appendChild(link);
+            }
+            link.href = iconUrl || 'data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🖥️</text></svg>';
+            localStorage.setItem('hackerBrowserCloak', JSON.stringify({ title, icon: iconUrl }));
+        }
+
+        function resetCloak() {
+            localStorage.removeItem('hackerBrowserCloak');
+            document.title = 'TERMINAL_BROWSER_V3';
+            const defaultIcon = 'data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🖥️</text></svg>';
+            setDocumentCloak('TERMINAL_BROWSER_V3', defaultIcon);
+            toggleCloakModal();
+        }
+
+        // --- Navigation Logic ---
+        function goBack() {
+            const iframe = getActiveIframe();
+            if(iframe && iframe.contentWindow) iframe.contentWindow.history.back();
+        }
+
+        function goForward() {
+            const iframe = getActiveIframe();
+            if(iframe && iframe.contentWindow) iframe.contentWindow.history.forward();
+        }
+
+        function reloadPage() {
+            const iframe = getActiveIframe();
+            if(iframe) iframe.src = iframe.src;
+        }
+
+        function loadUrl(url) {
+            updateCurrentTabUrl(url);
+        }
+
+        // --- Rendering ---
+        function renderTabs() {
+            if (!tabsContainer) return;
+            tabsContainer.innerHTML = '';
+
+            state.tabs.forEach(tab => {
+                const isActive = tab.id === state.activeTabId;
+
+                const tabEl = document.createElement('div');
+                tabEl.className = `
+                    group flex items-center gap-2 px-4 py-2 rounded-t-lg text-sm cursor-pointer border-t border-l border-r
+                    ${isActive
+                        ? 'bg-hacker-bg border-hacker-green text-hacker-green font-bold z-10 -mb-[1px]'
+                        : 'bg-hacker-dark border-transparent text-hacker-dim hover:text-hacker-green hover:bg-hacker-dark/80'}
+                `;
+                tabEl.onclick = () => switchToTab(tab.id);
+
+                const titleSpan = document.createElement('span');
+                titleSpan.className = 'max-w-[150px] truncate';
+                titleSpan.textContent = tab.title || 'Unknown';
+                tabEl.appendChild(titleSpan);
+
+                // Enlarged Random Image to the RIGHT
+                if (tab.iconImage) {
+                    const img = document.createElement('img');
+                    img.src = tab.iconImage;
+                    img.className = "w-8 h-8 rounded ml-2 object-cover border border-hacker-green/30"; // Enlarged and styled
+                    img.onerror = function() { this.style.display='none'; }; // Hide if broken link
+                    tabEl.appendChild(img);
+                }
+
+                const closeBtn = document.createElement('button');
+                closeBtn.className = `opacity-0 group-hover:opacity-100 hover:bg-red-900/50 hover:text-red-500 rounded-full p-0.5 transition-all ml-2 ${isActive ? 'opacity-100' : ''}`;
+                closeBtn.innerHTML = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>';
+                closeBtn.onclick = (e) => closeTab(e, tab.id);
+                tabEl.appendChild(closeBtn);
+
+                tabsContainer.appendChild(tabEl);
+            });
+        }
+
+        function renderBookmarks() {
+            if (!bookmarksBar) return;
+            bookmarksBar.innerHTML = '';
+
+            state.bookmarks.forEach((bm, index) => {
+                const container = document.createElement('div');
+                container.className = 'flex items-center bg-hacker-dark/40 hover:bg-hacker-dark rounded border border-transparent hover:border-hacker-green/30 px-2 py-1 gap-2 transition-colors group';
+
+                const btn = document.createElement('button');
+                btn.className = 'flex items-center gap-1 text-hacker-dim hover:text-hacker-green text-sm transition-colors';
+                // Using a shield icon for unremovable bookmarks for visual flair
+                const iconSvg = bm.unremovable
+                    ? `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>`
+                    : `<svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor" stroke="none"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>`;
+
+                btn.innerHTML = `${iconSvg} <span class="truncate max-w-[100px]">${bm.title}</span>`;
+                btn.onclick = () => updateCurrentTabUrl(bm.url);
+
+                container.appendChild(btn);
+
+                // Only add remove button if NOT unremovable
+                if (!bm.unremovable) {
+                    const removeBtn = document.createElement('button');
+                    removeBtn.className = 'text-hacker-dim/50 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-all';
+                    removeBtn.title = "Remove Bookmark";
+                    removeBtn.innerHTML = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>';
+                    removeBtn.onclick = (e) => removeBookmark(e, index);
+                    container.appendChild(removeBtn);
+                }
+
+                bookmarksBar.appendChild(container);
+            });
+        }
+
+        // Start safely
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', init);
+        } else {
+            init();
+        }
+
+    </script>
+</body>
+</html>
