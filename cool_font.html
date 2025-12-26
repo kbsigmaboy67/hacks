@@ -3,28 +3,174 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>kbsigmaboy67 - HackBrowser</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Rubik+Glitch+Pop&display=swap" rel="stylesheet">
+    <title>Cool Font with Green Glitch Effects</title>
     <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
         body {
             display: flex;
             justify-content: center;
             align-items: center;
-            height: 100vh;
-            margin: 0;
+            min-height: 100vh;
+            background: linear-gradient(135deg, #0a0e27 0%, #16213e 100%);
+            font-family: 'Arial', sans-serif;
         }
 
-        .rubik-glitch-pop-regular {
-            font-family: "Rubik Glitch Pop", system-ui;
-            font-weight: 400;
-            font-style: normal;
-            font-size: 3rem;
+        .container {
+            text-align: center;
+        }
+
+        h1 {
+            font-size: 4rem;
+            font-weight: bold;
+            margin-bottom: 2rem;
+            position: relative;
+        }
+
+        /* Green Glitch Effect - Main Text */
+        .glitch-text {
+            color: #00ff41;
+            text-shadow: 
+                -2px 0 #00ff41,
+                2px 0 #00ff41,
+                0 -2px #00ff41,
+                0 2px #00ff41,
+                -2px -2px #00ff41,
+                2px 2px #00ff41;
+            animation: glitch-shimmer 3s infinite;
+            position: relative;
+            z-index: 1;
+        }
+
+        /* Glitch text before pseudo-element (offset effect) */
+        .glitch-text::before {
+            content: attr(data-text);
+            position: absolute;
+            left: -2px;
+            top: -2px;
+            color: #00ff41;
+            text-shadow: 
+                -3px 0 #00ff41,
+                3px 0 #00ff41;
+            animation: glitch-left 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94) infinite;
+            z-index: -1;
+        }
+
+        /* Glitch text after pseudo-element (offset effect) */
+        .glitch-text::after {
+            content: attr(data-text);
+            position: absolute;
+            right: -2px;
+            bottom: -2px;
+            color: #00ff41;
+            text-shadow: 
+                -3px 0 #00ff41,
+                3px 0 #00ff41;
+            animation: glitch-right 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94) infinite reverse;
+            z-index: -1;
+        }
+
+        /* Shimmer animation - pulse glow effect */
+        @keyframes glitch-shimmer {
+            0% {
+                text-shadow: 
+                    -2px 0 #00ff41,
+                    2px 0 #00ff41,
+                    0 -2px #00ff41,
+                    0 2px #00ff41,
+                    -2px -2px #00ff41,
+                    2px 2px #00ff41;
+                opacity: 1;
+            }
+            50% {
+                text-shadow: 
+                    -2px 0 #00ff41,
+                    2px 0 #00ff41,
+                    0 -2px #00ff41,
+                    0 2px #00ff41,
+                    -3px -3px rgba(0, 255, 65, 0.8),
+                    3px 3px rgba(0, 255, 65, 0.8);
+                opacity: 0.95;
+            }
+            100% {
+                text-shadow: 
+                    -2px 0 #00ff41,
+                    2px 0 #00ff41,
+                    0 -2px #00ff41,
+                    0 2px #00ff41,
+                    -2px -2px #00ff41,
+                    2px 2px #00ff41;
+                opacity: 1;
+            }
+        }
+
+        /* Left glitch animation */
+        @keyframes glitch-left {
+            0% {
+                clip-path: polygon(0 0, 0 0, 0 100%, 0% 100%);
+                left: -2px;
+            }
+            20% {
+                clip-path: polygon(0 20%, 100% 20%, 100% 60%, 0 60%);
+            }
+            40% {
+                clip-path: polygon(0 50%, 100% 50%, 100% 80%, 0 80%);
+            }
+            60% {
+                clip-path: polygon(0 10%, 100% 10%, 100% 30%, 0 30%);
+            }
+            80% {
+                clip-path: polygon(0 70%, 100% 70%, 100% 100%, 0 100%);
+            }
+            100% {
+                clip-path: polygon(0 0, 0 0, 0 100%, 0% 100%);
+                left: -2px;
+            }
+        }
+
+        /* Right glitch animation */
+        @keyframes glitch-right {
+            0% {
+                clip-path: polygon(0 0, 0 0, 0 100%, 0% 100%);
+                right: -2px;
+            }
+            20% {
+                clip-path: polygon(0 30%, 100% 30%, 100% 60%, 0 60%);
+            }
+            40% {
+                clip-path: polygon(0 60%, 100% 60%, 100% 90%, 0 90%);
+            }
+            60% {
+                clip-path: polygon(0 40%, 100% 40%, 100% 70%, 0 70%);
+            }
+            80% {
+                clip-path: polygon(0 20%, 100% 20%, 100% 50%, 0 50%);
+            }
+            100% {
+                clip-path: polygon(0 0, 0 0, 0 100%, 0% 100%);
+                right: -2px;
+            }
+        }
+
+        /* Optional: Additional text styling */
+        p {
+            color: #00ff41;
+            font-size: 1.2rem;
+            margin-top: 2rem;
+            text-shadow: 0 0 10px rgba(0, 255, 65, 0.5);
         }
     </style>
 </head>
 <body>
-    <h1 class="rubik-glitch-pop-regular">kbsigmaboy67 - HackBrowser</h1>
+    <div class="container">
+        <h1>
+            <span class="glitch-text" data-text="GLITCH TEXT">GLITCH TEXT</span>
+        </h1>
+        <p>Green Glitch Effects with CSS Animations</p>
+    </div>
 </body>
 </html>
